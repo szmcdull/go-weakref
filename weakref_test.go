@@ -31,18 +31,20 @@ func testNewWeakRef(i int, t *testing.T) {
 	if *Get(r) != 123 {
 		t.Fail()
 	}
-	_ = &a
+	_ = &a // keep a in memory til here
 	runtime.GC()
 	time.Sleep(time.Millisecond * 1)
 	runtime.GC()
 	time.Sleep(time.Millisecond * 1)
 	if IsAlive(r) {
-		if !testingRace {
+		if !testingRace { // finalizer is called in a separated GoProc and may not finish yet in race condition
 			t.Error(`not freed`)
 		}
 	}
 
-	wg.Done()
+	if testingRace {
+		wg.Done()
+	}
 }
 
 func testNewFromSlice(i int, t *testing.T) {
@@ -63,6 +65,8 @@ func testNewFromSlice(i int, t *testing.T) {
 	if IsAlive(r) {
 		t.Error(`not freed`)
 	}
+
+	// wrap a defer function to test if pointer is invalid
 	func() {
 		defer func() {
 			e := recover()
@@ -75,7 +79,14 @@ func testNewFromSlice(i int, t *testing.T) {
 		}
 	}()
 
-	wg.Done()
+	if testingRace {
+		wg.Done()
+	}
+}
+
+func TestOnce(t *testing.T) {
+	testNewWeakRef(-1, t)
+	testNewFromSlice(-1, t)
 }
 
 func TestRace(t *testing.T) {

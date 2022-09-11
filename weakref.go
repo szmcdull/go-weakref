@@ -13,10 +13,16 @@ type (
 	}
 )
 
-// Caution should be taken when v is an address taken of an item from a slice/map.
-// When the slice/map grows the item would be copied to a new address,
-// the original one is freed, and IsAlive() will return false.
+// Caution should be taken when v from a slice/map.
+// When the slice/map grows its items would be copied to a new address,
+// the original items are freed, and IsAlive() will return false.
 func NewWeakRef[T any](v *T) *WeakRef[T] {
+	// we can assume the variable pointed by v is in the heap already,
+	// because its address is taken and passed here, even further to SetFinalizer.
+	// currently Go does not move an variable if it is already in the heap,
+	// so we can just save v to a uintptr and safely use it later.
+	// but this behavior may change in future versions.
+
 	result := &WeakRef[T]{
 		p: uintptr(unsafe.Pointer(v)),
 	}
@@ -45,8 +51,6 @@ func Get[T any](r *WeakRef[T]) (result *T) {
 		}
 	}()
 
-	// currently Go does not move an variable if it is already in the heap.
-	// but no guaranties in the future.
 	result = (*T)(unsafe.Pointer(r.p))
 
 	// when the finalizer is not called soon enough, invalid pointer may be used.
