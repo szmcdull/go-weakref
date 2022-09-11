@@ -2,13 +2,14 @@ package weakref
 
 import (
 	"runtime"
-	"sync"
 	"unsafe"
 )
 
 type (
 	WeakRef[T any] struct {
-		sync.Mutex
+		//sync.Mutex
+		// because p is checked in Get() after converted to typed pointer, it is no longer necessary to lock
+
 		p uintptr
 	}
 )
@@ -32,8 +33,8 @@ func NewWeakRef[T any](v *T) *WeakRef[T] {
 }
 
 func _OnFinalized[T any](r *WeakRef[T]) {
-	r.Lock()
-	defer r.Unlock()
+	// r.Lock()
+	// defer r.Unlock()
 	r.p = 0
 }
 
@@ -42,8 +43,8 @@ func IsAlive[T any](r *WeakRef[T]) bool {
 }
 
 func Get[T any](r *WeakRef[T]) (result *T) {
-	r.Lock()
-	defer r.Unlock()
+	// r.Lock()
+	// defer r.Unlock()
 	defer func() {
 		if e := recover(); e != nil { // finalizer not called yet, but invalid pointer detected
 			r.p = 0
