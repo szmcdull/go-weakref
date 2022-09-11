@@ -1,12 +1,3 @@
-# go-weakref
-
-A generic weak reference in Go. Inspired by https://github.com/ivanrad/go-weakref
-
-It is (naively) tested against race conditions.
-
-# Usage
-
-```go
 package main
 
 import (
@@ -31,4 +22,3 @@ func main() {
 
 	fmt.Println(weakref.IsAlive(p)) // false
 }
-```
