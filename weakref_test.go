@@ -1,27 +1,20 @@
 package weakref
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-type Int struct {
-	*int
-}
-
 var (
-	wg          sync.WaitGroup
-	testingRace bool
+	wg                     sync.WaitGroup
+	testingRace            bool
+	finalizeCount          int64
+	interfaceFinalizeCount int64
 )
-
-func makeRef() *WeakRef[int] {
-	a := 123
-	p := &a
-	r := NewWeakRef(p)
-	return r
-}
 
 func testNewWeakRef(i int, t *testing.T) {
 	//r := makeRef()
@@ -35,8 +28,16 @@ func testNewWeakRef(i int, t *testing.T) {
 	if *Get(r) != 123 {
 		t.Fail()
 	}
+	time.Sleep(time.Millisecond * 10)
+	if *Get(r) != 123 {
+		t.Fail()
+	}
+	time.Sleep(time.Second)
+	if *Get(r) != 123 {
+		t.Fail()
+	}
+
 	runtime.KeepAlive(a)
-	_ = &a // keep a in memory til here
 
 	runtime.GC()
 	time.Sleep(time.Millisecond * 10)
@@ -50,6 +51,9 @@ func testNewWeakRef(i int, t *testing.T) {
 	}
 	if p == nil && isAlive {
 		t.Errorf(`wrong status %p, %t`, p, isAlive)
+	}
+	if p == nil {
+		atomic.AddInt64(&finalizeCount, 1)
 	}
 	// when p is not null isAlive may be false
 
@@ -124,4 +128,9 @@ func TestRace(t *testing.T) {
 	}
 	wg.Wait()
 	testingRace = false
+
+	fmt.Println(`run times: `, testCount, `, finalizeCount: `, finalizeCount)
+	if finalizeCount == 0 {
+		t.Error(`none finalized`)
+	}
 }
