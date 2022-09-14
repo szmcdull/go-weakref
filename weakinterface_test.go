@@ -96,7 +96,7 @@ func testNewInterfaceFromSlice(i int, t *testing.T) {
 		t.Fail()
 	}
 
-	a = append(a, make([]TestInterface, 4096)...)
+	a = append(a, make([]TestInterface, 31)...)
 	runtime.GC()
 	time.Sleep(time.Millisecond * 1)
 	runtime.GC()

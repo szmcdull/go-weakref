@@ -72,7 +72,7 @@ func testNewFromSlice(i int, t *testing.T) {
 		t.Fail()
 	}
 
-	a = append(a, make([]int, 2560)...)
+	a = append(a, make([]int, 255)...)
 	runtime.GC()
 	time.Sleep(time.Millisecond * 1)
 	runtime.GC()
