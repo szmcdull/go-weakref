@@ -1,6 +1,7 @@
 package weakref
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
 	"unsafe"
@@ -17,7 +18,7 @@ type (
 	}
 )
 
-// safe with slice/map of interface.
+// safe with slice of interface.
 // because interface itself is already a reference to some data.
 // it is alright that the interface itself is garbage collected as long as the data pointed to is alive.
 func NewWeakInterface[T any](v T) *WeakInterface[T] {
@@ -53,11 +54,16 @@ func IsAliveI[T any](w *WeakInterface[T]) bool {
 
 func GetInterface[T any](r *WeakInterface[T]) (result T) {
 	defer func() {
-		if e := recover(); e == `invalid memory address or nil pointer dereference` { // finalizer not called yet, but invalid pointer detected
-			r.word = 0
-			r.typ = 0
-			var a T
-			result = a
+		if e := recover(); e != nil {
+			s := fmt.Sprintf(`%v`, e)
+			if s == `runtime error: invalid memory address or nil pointer dereference` { // finalizer not called yet, but invalid pointer detected
+				r.word = 0
+				r.typ = 0
+				var a T
+				result = a
+			} else {
+				panic(e)
+			}
 		}
 	}()
 
