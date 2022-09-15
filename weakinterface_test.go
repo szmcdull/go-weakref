@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 )
 
 type (
@@ -134,5 +135,21 @@ func TestInterfaceRace(t *testing.T) {
 	fmt.Println(`WeakInterface test times: `, testCount, `, finalizeCount: `, interfaceFinalizeCount)
 	if interfaceFinalizeCount == 0 {
 		t.Error(`none finalized`)
+	}
+}
+
+func TestPointerInterface(t *testing.T) {
+	var i, ip any
+	a := Struct{123}
+	i = a
+	ip = &a
+	ii := (*GoInterface)(unsafe.Pointer(&i))
+	iip := (*GoInterface)(unsafe.Pointer(&ip))
+	if iip.word != uintptr(unsafe.Pointer(&a)) {
+		t.Error(`incompatible Go version, interface underlying structure changed!`)
+	}
+	if iip.word == ii.word {
+		t.Error(`non-pointer interface should make copy of variable and take the address of the copy`)
+		// this is not related though, just curious to find out the difference
 	}
 }
