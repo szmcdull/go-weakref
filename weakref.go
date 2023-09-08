@@ -1,6 +1,7 @@
 package weakref
 
 import (
+	"fmt"
 	"runtime"
 	"unsafe"
 )
@@ -15,8 +16,8 @@ type (
 	}
 )
 
-// Caution should be taken when v from a slice/map.
-// When the slice/map grows its items would be copied to a new address,
+// Caution should be taken when v from a slice.
+// When the slice grows its items would be copied to a new address,
 // the original items are freed, and IsAlive() will return false.
 func NewWeakRef[T any](v *T) *WeakRef[T] {
 	// we can assume the variable pointed by v is in the heap already,
@@ -34,8 +35,6 @@ func NewWeakRef[T any](v *T) *WeakRef[T] {
 }
 
 func _OnFinalized[T any](r *WeakRef[T], p *T) {
-	// r.Lock()
-	// defer r.Unlock()
 	if r.callback == nil || r.callback(p) {
 		r.p = 0
 	}
@@ -46,12 +45,15 @@ func IsAlive[T any](r *WeakRef[T]) bool {
 }
 
 func Get[T any](r *WeakRef[T]) (result *T) {
-	// r.Lock()
-	// defer r.Unlock()
 	defer func() {
-		if e := recover(); e != nil { // finalizer not called yet, but invalid pointer detected
-			r.p = 0
-			result = nil
+		if e := recover(); e != nil {
+			s := fmt.Sprintf(`%v`, e)
+			if s == `runtime error: invalid memory address or nil pointer dereference` { // finalizer not called yet, but invalid pointer detected
+				r.p = 0
+				result = nil
+			} else {
+				panic(e)
+			}
 		}
 	}()
 
