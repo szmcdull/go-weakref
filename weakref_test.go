@@ -12,23 +12,24 @@ var (
 	testingRace bool
 )
 
-func makeRef() *WeakRef[int] {
-	a := 123
+func makeRef() *WeakRef[[]int] {
+	a := make([]int, 1_000) // make a variable large enough to be garbage collected
 	p := &a
 	r := NewWeakRef(p)
 	return r
 }
 
 func testNewWeakRef(i int, t *testing.T) {
-	//r := makeRef()
-	a := 123
+	r2 := makeRef()
+	a := make([]int, 100)
+	a[0] = 123
 	p := &a
 	r := NewWeakRef(p)
 
 	if !IsAlive(r) {
 		t.Error(`early freed`)
 	}
-	if *Get(r) != 123 {
+	if (*Get(r))[0] != 123 {
 		t.Fail()
 	}
 	_ = &a // keep a in memory til here
@@ -36,7 +37,7 @@ func testNewWeakRef(i int, t *testing.T) {
 	time.Sleep(time.Millisecond * 1)
 	runtime.GC()
 	time.Sleep(time.Millisecond * 1)
-	if IsAlive(r) {
+	if IsAlive(r2) {
 		if !testingRace { // finalizer is called in a separated GoProc and may not finish yet in race condition
 			t.Error(`not freed`)
 		}

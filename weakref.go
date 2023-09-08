@@ -10,7 +10,8 @@ type (
 		//sync.Mutex
 		// because p is checked in Get() after converted to typed pointer, it is no longer necessary to lock
 
-		p uintptr
+		p        uintptr
+		callback func(*T) bool
 	}
 )
 
@@ -27,15 +28,17 @@ func NewWeakRef[T any](v *T) *WeakRef[T] {
 	result := &WeakRef[T]{
 		p: uintptr(unsafe.Pointer(v)),
 	}
-	runtime.SetFinalizer(v, func(v *T) { _OnFinalized(result) })
+	runtime.SetFinalizer(v, func(v *T) { _OnFinalized(result, v) })
 
 	return result
 }
 
-func _OnFinalized[T any](r *WeakRef[T]) {
+func _OnFinalized[T any](r *WeakRef[T], p *T) {
 	// r.Lock()
 	// defer r.Unlock()
-	r.p = 0
+	if r.callback == nil || r.callback(p) {
+		r.p = 0
+	}
 }
 
 func IsAlive[T any](r *WeakRef[T]) bool {
@@ -59,4 +62,11 @@ func Get[T any](r *WeakRef[T]) (result *T) {
 	_ = *result
 
 	return result
+}
+
+// SetCallback sets a callback function to be called when the pointer is freed.
+// The callback function must return true, unless it decides that the pointer is still needed and it references the pointer again
+// to prevent it from being garbage collected.
+func (me *WeakRef[T]) SetCallback(callback func(*T) bool) {
+	me.callback = callback
 }
